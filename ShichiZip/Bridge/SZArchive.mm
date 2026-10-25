@@ -10,6 +10,7 @@
 #include <vector>
 
 #import "../Utilities/SZObjCLog.h"
+#import "../Utilities/SZPasswordVault.h"
 
 #include <objc/objc-sync.h>
 
@@ -2073,6 +2074,10 @@ static BOOL SZConfigureZipContentUpdate(CAgent* agent,
     if (isDefined) {
         _cachedPassword = ToNS(password);
         _cachedPasswordIsDefined = YES;
+        // Every caller of this method has just proven the password correct (a
+        // successful open / extraction / entry read with it), so this is the
+        // point where the password library learns about it.
+        [SZPasswordVault recordPassword:ToNS(password) forFile:_archivePath];
     } else {
         [self clearCachedPassword];
     }

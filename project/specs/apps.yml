@@ -18,6 +18,7 @@ targets:
           - "QuickLookPreview/Extension/**"
     dependencies:
       - sdk: AppIntents.framework
+      - sdk: Security.framework
       - target: ShichiZipLocalization
         embed: true
       - target: ShichiZipQuickActionCore
@@ -166,6 +167,7 @@ targets:
     sources: *app_sources
     dependencies:
       - sdk: AppIntents.framework
+      - sdk: Security.framework
       - target: ShichiZipLocalization
         embed: true
       - target: ShichiZipQuickActionCore
