@@ -47,6 +47,7 @@ extension FileManagerWindowController: NSToolbarDelegate {
     static let moveItem = NSToolbarItem.Identifier("fm_move")
     static let deleteItem = NSToolbarItem.Identifier("fm_delete")
     static let infoItem = NSToolbarItem.Identifier("fm_info")
+    static let passwordItem = NSToolbarItem.Identifier("fm_passwords")
 
     func toolbar(_ toolbar: NSToolbar, itemForItemIdentifier itemIdentifier: NSToolbarItem.Identifier,
                  willBeInsertedIntoToolbar _: Bool) -> NSToolbarItem?
@@ -73,7 +74,8 @@ extension FileManagerWindowController: NSToolbarDelegate {
             if FileManagerToolbarPreferences.showsArchiveToolbar {
                 identifiers.append(.space)
             }
-            identifiers.append(contentsOf: [Self.copyItem, Self.moveItem, Self.deleteItem, Self.infoItem])
+            identifiers.append(contentsOf: [Self.copyItem, Self.moveItem, Self.deleteItem, Self.infoItem,
+                                            .space, Self.passwordItem])
         }
 
         return identifiers
@@ -82,7 +84,7 @@ extension FileManagerWindowController: NSToolbarDelegate {
     func toolbarAllowedItemIdentifiers(_: NSToolbar) -> [NSToolbarItem.Identifier] {
         (FileManagerToolbarPreferences.style == .unified ? [Self.upItem] : []) +
             [Self.addItem, Self.extractItem, Self.testItem,
-             Self.copyItem, Self.moveItem, Self.deleteItem, Self.infoItem,
+             Self.copyItem, Self.moveItem, Self.deleteItem, Self.infoItem, Self.passwordItem,
              .space, .flexibleSpace]
     }
 
@@ -144,6 +146,14 @@ extension FileManagerWindowController: NSToolbarDelegate {
             item.toolTip = SZL10n.string("toolbar.info")
             item.image = toolbarImage(systemSymbolName: "info.circle", accessibilityDescription: SZL10n.string("toolbar.info"))
             item.action = #selector(showProperties(_:))
+
+        case Self.passwordItem:
+            let label = SZL10n.string("password.vault.openShort")
+            item.label = label
+            item.toolTip = SZL10n.string("password.vault.open")
+            item.image = toolbarImage(systemSymbolName: "key.fill", accessibilityDescription: label)
+            item.action = #selector(showPasswordLibrary(_:))
+            item.visibilityPriority = .low
 
         default:
             item.isBordered = false

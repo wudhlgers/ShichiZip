@@ -24,6 +24,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, FileManagerDocumentOpenRouti
     private var benchmarkWindowController: BenchmarkWindowController?
     private var deleteTemporaryFilesWindowController: DeleteTemporaryFilesWindowController?
     private var settingsWindowController: SettingsWindowController?
+    private var passwordLibraryWindowController: PasswordLibraryWindowController?
     private var recentArchiveDocumentController: ShichiZipDocumentController?
     private var applicationTerminationTask: Task<Void, Never>?
     private let launchOpenCoordinator = LaunchOpenCoordinator()
@@ -60,6 +61,21 @@ class AppDelegate: NSObject, NSApplicationDelegate, FileManagerDocumentOpenRouti
         }
         NSWindow.allowsAutomaticWindowTabbing = false
     }
+
+    #if DEBUG
+        /// Password Vault UI tests assert English menu and window titles; the
+        /// in-memory vault env doubles as the "deterministic UI test" switch,
+        /// so a saved language override must not leak into the run.
+        private static func clearLanguageOverrideForUITests() {
+            UserDefaults.standard.removeObject(forKey: "LanguageOverride")
+            if let appGroupIdentifier = SZSharedUserDefaults.appGroupIdentifier,
+               let suite = UserDefaults(suiteName: appGroupIdentifier)
+            {
+                suite.removeObject(forKey: "LanguageOverride")
+            }
+            SZL10n.reloadBundle()
+        }
+    #endif
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         ShichiZipQuickActionTransport.cleanupStalePayloads()
@@ -98,6 +114,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, FileManagerDocumentOpenRouti
     }
 
     func applicationWillTerminate(_: Notification) {
+        PasswordVaultClipboard.shared.clearIfOwned()
         if #available(macOS 26.0, *) {
             lastWindowCloseTerminationDeferrer.stop()
         }
@@ -326,6 +343,18 @@ class AppDelegate: NSObject, NSApplicationDelegate, FileManagerDocumentOpenRouti
             deleteTemporaryFilesWindowController = DeleteTemporaryFilesWindowController()
         }
         deleteTemporaryFilesWindowController?.showWindow(self)
+    }
+
+    @IBAction func showPasswordLibrary(_ sender: Any?) {
+        if passwordLibraryWindowController == nil {
+            let controller = PasswordLibraryWindowController()
+            controller.onWindowWillClose = { [weak self, weak controller] in
+                guard self?.passwordLibraryWindowController === controller else { return }
+                self?.passwordLibraryWindowController = nil
+            }
+            passwordLibraryWindowController = controller
+        }
+        passwordLibraryWindowController?.showWindow(sender)
     }
 
     @IBAction func showPreferences(_: Any?) {

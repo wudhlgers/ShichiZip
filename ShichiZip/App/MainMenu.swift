@@ -1003,6 +1003,13 @@ enum MainMenu {
                 target: NSApp.delegate)
         toolsMenu.addItem(.separator())
         addItem(to: toolsMenu,
+                title: SZL10n.string("password.vault.open"),
+                action: #selector(AppDelegate.showPasswordLibrary(_:)),
+                keyEquivalent: "k",
+                modifiers: [.command, .shift],
+                target: NSApp.delegate)
+        toolsMenu.addItem(.separator())
+        addItem(to: toolsMenu,
                 title: SZL10n.string("tools.benchmark"),
                 action: #selector(AppDelegate.showBenchmark(_:)),
                 keyEquivalent: "b",

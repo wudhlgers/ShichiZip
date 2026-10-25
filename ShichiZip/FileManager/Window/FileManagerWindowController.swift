@@ -826,6 +826,10 @@ class FileManagerWindowController: NSWindowController, NSWindowDelegate, NSUserI
         }
     }
 
+    @objc func showPasswordLibrary(_ sender: Any?) {
+        (NSApp.delegate as? AppDelegate)?.showPasswordLibrary(sender)
+    }
+
     @objc func toggleArchiveToolbar(_: Any?) {
         FileManagerToolbarPreferences.setShowsArchiveToolbar(!FileManagerToolbarPreferences.showsArchiveToolbar)
         setupToolbar()
