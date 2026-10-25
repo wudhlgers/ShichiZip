@@ -62,7 +62,8 @@ private:
 static inline HRESULT SZRequestOperationPassword(SZOperationSession* session,
     UString& outPassword,
     bool& wasDefined,
-    NSString* context = nil) {
+    NSString* context = nil,
+    BOOL autoApply = NO) {
     if (!session) {
         return E_ABORT;
     }
@@ -75,6 +76,8 @@ static inline HRESULT SZRequestOperationPassword(SZOperationSession* session,
     BOOL confirmed = [session requestPasswordWithTitle:SZLocalizedString(@"password.enterPassword")
                                                message:message
                                           initialValue:initialValue
+                                              filePath:context
+                                             autoApply:autoApply
                                               password:&resolvedPassword];
     if (!confirmed) {
         return E_ABORT;

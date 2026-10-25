@@ -129,6 +129,7 @@ final class ExtractDialogController: NSObject {
 
     private let suggestedDestinationURL: URL
     private let baseDirectory: URL
+    private let archivePath: String?
     private let messageText: String?
     private let defaultPathMode: SZPathMode
     private let showsCurrentPathsOption: Bool
@@ -142,11 +143,13 @@ final class ExtractDialogController: NSObject {
          defaultPathMode: SZPathMode,
          showsCurrentPathsOption: Bool,
          suggestedSplitDestinationName: String? = nil,
+         archivePath: String? = nil,
          sourceArchiveAvailableForMoveToTrash: Bool = true,
          sourceArchiveAvailableForQuarantineInheritance: Bool = true)
     {
         self.suggestedDestinationURL = suggestedDestinationURL.standardizedFileURL
         self.baseDirectory = baseDirectory.standardizedFileURL
+        self.archivePath = archivePath
         messageText = message
         self.defaultPathMode = defaultPathMode
         self.showsCurrentPathsOption = showsCurrentPathsOption
@@ -176,6 +179,7 @@ final class ExtractDialogController: NSObject {
                                                                overwriteModeOptions: overwriteModeOptions,
                                                                destinationHistoryEntries: DestinationHistory.entries(),
                                                                baseDirectory: baseDirectory,
+                                                               archivePath: archivePath,
                                                                sourceArchiveAvailableForMoveToTrash: sourceArchiveAvailableForMoveToTrash,
                                                                sourceArchiveAvailableForQuarantineInheritance: sourceArchiveAvailableForQuarantineInheritance)
         let controller = SZModalDialogController(style: .informational,

@@ -14,6 +14,11 @@ class ShichiZipUITestCase: XCTestCase {
         []
     }
 
+    /// Extra launch environment for subclasses.
+    var additionalLaunchEnvironment: [String: String] {
+        [:]
+    }
+
     private static let defaultLaunchArguments: [String] = []
 
     private static let defaultLaunchEnvironment: [String: String] = [
@@ -29,6 +34,7 @@ class ShichiZipUITestCase: XCTestCase {
         app.launchArguments += Self.defaultLaunchArguments
         app.launchArguments += additionalLaunchArguments
         app.launchEnvironment.merge(Self.defaultLaunchEnvironment) { _, new in new }
+        app.launchEnvironment.merge(additionalLaunchEnvironment) { _, new in new }
         app.launch()
     }
 

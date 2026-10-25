@@ -61,6 +61,7 @@ final class ArchiveOperationPresenter: NSObject, NSWindowDelegate {
                 self?.receive(snapshot)
             }
         }
+        let weakSession = session
         session.passwordRequestHandler = { [weak self] title, message, initialValue, passwordPointer in
             MainActor.assumeIsolated {
                 self?.showProgressIfNeeded()
@@ -68,7 +69,8 @@ final class ArchiveOperationPresenter: NSObject, NSWindowDelegate {
 
             guard let password = szPromptForPasswordSync(title: title,
                                                          message: message,
-                                                         initialValue: initialValue)
+                                                         initialValue: initialValue,
+                                                         archivePath: weakSession.lastPasswordRequestFilePath)
             else {
                 return false
             }

@@ -94,6 +94,9 @@ typedef void (^SZOperationSnapshotHandler)(SZOperationSnapshot* snapshot);
 @property (nonatomic, readonly, getter=isCancellationRequested) BOOL cancellationRequested;
 @property (nonatomic, readonly, getter=isCancellationAllowed) BOOL cancellationAllowed;
 @property (nonatomic, readonly) uint64_t totalIssueCount;
+/// File path supplied with the most recent password request that carried one.
+/// Password prompts use it to offer "This Archive" scoping from the vault.
+@property (nonatomic, copy, readonly, nullable) NSString* lastPasswordRequestFilePath;
 
 - (void)reportPhase:(SZOperationPhase)phase;
 - (void)reportProgressFraction:(double)fraction;
@@ -112,6 +115,16 @@ typedef void (^SZOperationSnapshotHandler)(SZOperationSnapshot* snapshot);
 - (BOOL)requestPasswordWithTitle:(NSString*)title
                          message:(nullable NSString*)message
                     initialValue:(nullable NSString*)initialValue
+                        password:(NSString* _Nullable* _Nullable)password;
+
+/// Like the method above, but may use the most recent password stored for
+/// `filePath`. When `autoApply` is YES a stored password is returned directly
+/// once per session before prompting; when NO it only prefills the prompt.
+- (BOOL)requestPasswordWithTitle:(NSString*)title
+                         message:(nullable NSString*)message
+                    initialValue:(nullable NSString*)initialValue
+                        filePath:(nullable NSString*)filePath
+                       autoApply:(BOOL)autoApply
                         password:(NSString* _Nullable* _Nullable)password;
 - (NSInteger)requestChoice:(SZOperationChoiceRequest*)request;
 - (nullable SZArchiveUpdateEncryption*)requestUpdateEncryptionForArchive:(NSString*)archivePath

@@ -4,6 +4,8 @@
 
 #import "SZArchive.h"
 
+#import "../Utilities/SZPasswordVault.h"
+
 static inline void SZDispatchSyncOnMain(dispatch_block_t block) {
     if ([NSThread isMainThread]) {
         block();
@@ -120,6 +122,8 @@ static const NSUInteger SZOperationIssueDetailLimit = 256;
     CFTimeInterval _lastSnapshotDispatchTime;
     BOOL _snapshotDispatchScheduled;
     SZOperationSnapshotHandler _snapshotHandler;
+    NSMutableSet<NSString*>* _autoTriedPasswordKeys;
+    NSString* _lastPasswordRequestFilePath;
 }
 
 @end
@@ -338,6 +342,53 @@ static const NSUInteger SZOperationIssueDetailLimit = 256;
     @synchronized(self) {
         return [self newSnapshotWhileLocked];
     }
+}
+
+- (NSString*)lastPasswordRequestFilePath {
+    @synchronized(self) {
+        return [_lastPasswordRequestFilePath copy];
+    }
+}
+
+- (BOOL)requestPasswordWithTitle:(NSString*)title
+                         message:(NSString*)message
+                    initialValue:(NSString*)initialValue
+                        filePath:(NSString*)filePath
+                       autoApply:(BOOL)autoApply
+                        password:(NSString* _Nullable* _Nullable)password {
+    if (filePath.length > 0) {
+        @synchronized(self) {
+            _lastPasswordRequestFilePath = [filePath copy];
+        }
+    }
+
+    NSString* promptInitialValue = initialValue;
+    if (password && initialValue.length == 0 && filePath.length > 0) {
+        NSString* automaticPassword = [SZPasswordVault passwordForFile:filePath];
+        if (automaticPassword.length > 0) {
+            if (autoApply) {
+                @synchronized(self) {
+                    if (!_autoTriedPasswordKeys) {
+                        _autoTriedPasswordKeys = [NSMutableSet set];
+                    }
+                    NSString* key = [NSString stringWithFormat:@"%@\n%@",
+                                     filePath.lastPathComponent, automaticPassword];
+                    if (![_autoTriedPasswordKeys containsObject:key]) {
+                        [_autoTriedPasswordKeys addObject:key];
+                        *password = automaticPassword;
+                        return YES;
+                    }
+                }
+            } else {
+                promptInitialValue = automaticPassword;
+            }
+        }
+    }
+
+    return [self requestPasswordWithTitle:title
+                                  message:message
+                             initialValue:promptInitialValue
+                                 password:password];
 }
 
 - (BOOL)requestPasswordWithTitle:(NSString*)title

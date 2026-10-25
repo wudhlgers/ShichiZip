@@ -153,6 +153,7 @@ final class ExtractDialogContentController: NSObject {
     }
 
     private let baseDirectory: URL
+    private let archivePath: String?
     private let pathModeOptions: [ExtractDialogOption<SZPathMode>]
     private let overwriteModeOptions: [ExtractDialogOption<SZOverwriteMode>]
     private let sourceArchiveAvailableForMoveToTrash: Bool
@@ -185,6 +186,7 @@ final class ExtractDialogContentController: NSObject {
          overwriteModeOptions: [ExtractDialogOption<SZOverwriteMode>],
          destinationHistoryEntries: [String],
          baseDirectory: URL,
+         archivePath: String? = nil,
          sourceArchiveAvailableForMoveToTrash: Bool,
          sourceArchiveAvailableForQuarantineInheritance: Bool)
     {
@@ -192,6 +194,7 @@ final class ExtractDialogContentController: NSObject {
         self.pathModeOptions = pathModeOptions
         self.overwriteModeOptions = overwriteModeOptions
         self.baseDirectory = baseDirectory.standardizedFileURL
+        self.archivePath = archivePath
         self.sourceArchiveAvailableForMoveToTrash = sourceArchiveAvailableForMoveToTrash
         self.sourceArchiveAvailableForQuarantineInheritance = sourceArchiveAvailableForQuarantineInheritance
 
@@ -318,12 +321,22 @@ final class ExtractDialogContentController: NSObject {
         splitRow.distribution = .fill
 
         let passwordContainer = makePasswordContainer()
+        let libraryButton = NSButton(title: SZL10n.string("password.vault.choose"),
+                                     target: self,
+                                     action: #selector(openPasswordLibrary(_:)))
+        libraryButton.bezelStyle = .recessed
+        libraryButton.controlSize = .small
+        libraryButton.setAccessibilityIdentifier("extract.openPasswordLibrary")
+        let passwordRow = NSStackView(views: [passwordContainer, libraryButton])
+        passwordRow.orientation = .horizontal
+        passwordRow.alignment = .centerY
+        passwordRow.spacing = 8
         let formStack = NSStackView(views: [
             makeFormRow(label: SZL10n.string("extract.extractTo"), control: pathRow),
             makeFormRow(label: SZL10n.string("app.extract.separateFolder"), control: splitRow),
             makeFormRow(label: SZL10n.string("extract.pathMode"), control: pathModePopup),
             makeFormRow(label: SZL10n.string("extract.overwriteMode"), control: overwriteModePopup),
-            makeFormRow(label: SZL10n.string("password.password") + ":", control: passwordContainer),
+            makeFormRow(label: SZL10n.string("password.password") + ":", control: passwordRow),
         ])
         formStack.orientation = .vertical
         formStack.alignment = .leading
@@ -370,6 +383,19 @@ final class ExtractDialogContentController: NSObject {
         ])
 
         return wrapper
+    }
+
+    @objc private func openPasswordLibrary(_: NSButton) {
+        guard let password = PasswordVaultPicker.runModal(forArchivePath: archivePath),
+              !password.isEmpty
+        else { return }
+        applyVaultPassword(password)
+    }
+
+    private func applyVaultPassword(_ password: String) {
+        securePasswordField.stringValue = password
+        plainPasswordField.stringValue = password
+        updatePasswordVisibilityUI(moveFocus: true)
     }
 
     private func makePasswordContainer() -> NSView {

@@ -624,6 +624,7 @@ enum FileManagerArchiveCommandSupport {
                                              defaultPathMode: snapshot.isVirtualLocation ? .currentPaths : .fullPaths,
                                              showsCurrentPathsOption: snapshot.isVirtualLocation,
                                              suggestedSplitDestinationName: snapshot.suggestedExtractDestinationName,
+                                             archivePath: snapshot.sourceArchiveURLForPostProcessing?.path,
                                              sourceArchiveAvailableForMoveToTrash: snapshot.sourceArchiveURLForPostProcessing != nil,
                                              sourceArchiveAvailableForQuarantineInheritance: snapshot.quarantineSourceArchiveURLForExtraction != nil)
         return await dialog.runModal(for: parentWindow)

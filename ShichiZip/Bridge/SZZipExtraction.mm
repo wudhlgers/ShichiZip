@@ -348,6 +348,8 @@ HRESULT SZPrepareZipPasswords(IInArchive* archive,
                 if (![session requestPasswordWithTitle:SZLocalizedString(@"password.enterPassword")
                                                message:message
                                           initialValue:nil
+                                              filePath:ToNS(ui->ArchivePath)
+                                             autoApply:YES
                                               password:&password])
                     return E_ABORT;
                 // A repeated answer may be a user correcting their next input;

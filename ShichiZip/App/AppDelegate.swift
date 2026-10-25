@@ -52,6 +52,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, FileManagerDocumentOpenRouti
 
     func applicationWillFinishLaunching(_: Notification) {
         SZSettingsMigrations.preparePreferences()
+        #if DEBUG
+            if ProcessInfo.processInfo.environment["SHICHIZIP_UI_TEST_IN_MEMORY_PASSWORD_VAULT"] == "1" {
+                Self.clearLanguageOverrideForUITests()
+            }
+        #endif
         let documentController = ShichiZipDocumentController()
         precondition(NSDocumentController.shared === documentController,
                      "ShichiZipDocumentController must be the shared document controller")

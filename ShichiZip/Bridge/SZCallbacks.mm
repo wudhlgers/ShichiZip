@@ -561,7 +561,8 @@ Z7_COM7F_IMF(SZFolderExtractCallback::CryptoGetTextPassword(BSTR* pw)) {
         HRESULT hr = SZRequestOperationPassword(Session,
             Password,
             PasswordIsDefined,
-            ToNS(ArchivePath));
+            ToNS(ArchivePath),
+            YES);
         if (hr != S_OK)
             return hr;
     }

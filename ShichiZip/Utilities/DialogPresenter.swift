@@ -76,12 +76,14 @@ func szRunChoiceDialog(_ request: SZOperationChoiceRequest) -> Int {
 
 func szPromptForPasswordSync(title: String,
                              message: String? = nil,
-                             initialValue: String? = nil) -> String?
+                             initialValue: String? = nil,
+                             archivePath: String? = nil) -> String?
 {
     var password: NSString?
     let confirmed = SZDialogPresenter.promptForPassword(withTitle: title,
                                                         message: message,
                                                         initialValue: initialValue,
+                                                        archivePath: archivePath,
                                                         password: &password)
     guard confirmed else { return nil }
     return password as String?

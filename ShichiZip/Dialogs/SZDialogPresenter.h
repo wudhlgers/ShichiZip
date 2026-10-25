@@ -35,6 +35,14 @@ NS_ASSUME_NONNULL_BEGIN
                       initialValue:(nullable NSString*)initialValue
                           password:(NSString* _Nullable* _Nullable)password;
 
+/// Like the method above; `archivePath` scopes the library picker's
+/// "This Archive" view to that file.
++ (BOOL)promptForPasswordWithTitle:(NSString*)title
+                           message:(nullable NSString*)message
+                      initialValue:(nullable NSString*)initialValue
+                        archivePath:(nullable NSString*)archivePath
+                          password:(NSString* _Nullable* _Nullable)password;
+
 + (BOOL)promptForMemoryLimitWithRequiredBytes:(uint64_t)requiredBytes
                             currentLimitBytes:(uint64_t)currentLimitBytes
                                   archivePath:(nullable NSString*)archivePath

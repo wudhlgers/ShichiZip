@@ -10,6 +10,7 @@
 
 SZOperationSession* SZMakeDefaultOperationSession(void) {
     SZOperationSession* session = [SZOperationSession new];
+    __weak SZOperationSession* weakSession = session;
     session.passwordRequestHandler = ^BOOL(NSString* title,
         NSString* message,
         NSString* initialValue,
@@ -17,6 +18,7 @@ SZOperationSession* SZMakeDefaultOperationSession(void) {
         return [SZDialogPresenter promptForPasswordWithTitle:title
                                                      message:message
                                                 initialValue:initialValue
+                                                  archivePath:weakSession.lastPasswordRequestFilePath
                                                     password:password];
     };
     session.choiceRequestHandler = ^NSInteger(SZOperationChoiceRequest* request) {

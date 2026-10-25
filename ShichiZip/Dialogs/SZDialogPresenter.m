@@ -3,6 +3,12 @@
 #import "../Bridge/SZArchive.h"
 #import "../Bridge/SZBridgeCommon.h"
 
+#if SHICHIZIP_ZS_VARIANT
+#import "ShichiZip_ZS-Swift.h"
+#else
+#import "ShichiZip-Swift.h"
+#endif
+
 static NSString* const SZShowPasswordPreferenceKey = @"SZShowPasswordInPrompts";
 
 static SZDialogAction* SZDialogActionMake(NSString* title, SZDialogActionRole roles) {
@@ -20,7 +26,8 @@ static uint32_t SZDialogRoundUpByteCountToGB(uint64_t byteCount) {
 
 @interface SZPasswordAccessoryController : NSViewController
 
-- (instancetype)initWithInitialValue:(nullable NSString*)initialValue;
+- (instancetype)initWithInitialValue:(nullable NSString*)initialValue
+                          archivePath:(nullable NSString*)archivePath;
 
 @property (nonatomic, readonly) NSString* password;
 @property (nonatomic, readonly) BOOL showsPassword;
@@ -49,10 +56,14 @@ static uint32_t SZDialogRoundUpByteCountToGB(uint64_t byteCount) {
     NSSecureTextField* _secureField;
     NSTextField* _plainField;
     NSButton* _showPasswordButton;
+    NSButton* _libraryButton;
+    NSString* _archivePath;
 }
 
-- (instancetype)initWithInitialValue:(NSString*)initialValue {
+- (instancetype)initWithInitialValue:(NSString*)initialValue
+                          archivePath:(NSString*)archivePath {
     if ((self = [super initWithNibName:nil bundle:nil])) {
+        _archivePath = [archivePath copy];
         NSString* password = initialValue ?: @"";
 
         _secureField = [[NSSecureTextField alloc] initWithFrame:NSZeroRect];
@@ -71,6 +82,14 @@ static uint32_t SZDialogRoundUpByteCountToGB(uint64_t byteCount) {
         _showPasswordButton = [NSButton checkboxWithTitle:SZLocalizedString(@"password.showPassword") target:self action:@selector(togglePasswordVisibility:)];
         _showPasswordButton.translatesAutoresizingMaskIntoConstraints = NO;
         _showPasswordButton.state = [SZSharedNSUserDefaults() boolForKey:SZShowPasswordPreferenceKey] ? NSControlStateValueOn : NSControlStateValueOff;
+
+        _libraryButton = [NSButton buttonWithTitle:SZLocalizedString(@"password.vault.choose")
+                                            target:self
+                                            action:@selector(openPasswordLibrary:)];
+        _libraryButton.translatesAutoresizingMaskIntoConstraints = NO;
+        _libraryButton.bezelStyle = NSBezelStyleRecessed;
+        _libraryButton.controlSize = NSControlSizeSmall;
+        _libraryButton.accessibilityIdentifier = @"passwordPrompt.openLibrary";
         _showPasswordButton.accessibilityIdentifier = @"passwordPrompt.showPassword";
     }
     return self;
@@ -82,6 +101,7 @@ static uint32_t SZDialogRoundUpByteCountToGB(uint64_t byteCount) {
     [container addSubview:_secureField];
     [container addSubview:_plainField];
     [container addSubview:_showPasswordButton];
+    [container addSubview:_libraryButton];
 
     [NSLayoutConstraint activateConstraints:@[
         [container.widthAnchor constraintGreaterThanOrEqualToConstant:320],
@@ -98,10 +118,33 @@ static uint32_t SZDialogRoundUpByteCountToGB(uint64_t byteCount) {
                                                       constant:8],
         [_showPasswordButton.leadingAnchor constraintEqualToAnchor:container.leadingAnchor],
         [_showPasswordButton.bottomAnchor constraintEqualToAnchor:container.bottomAnchor],
+
+        // The library opens as plain text on the show-password row, so the
+        // entry point stays discoverable without its own dedicated row.
+        [_libraryButton.centerYAnchor constraintEqualToAnchor:_showPasswordButton.centerYAnchor],
+        [_libraryButton.trailingAnchor constraintEqualToAnchor:container.trailingAnchor],
     ]];
 
     self.view = container;
     [self syncVisibility];
+}
+
+- (void)openPasswordLibrary:(__unused NSButton*)sender {
+    NSString* password = [SZPasswordVaultPicker runModalForArchivePath:_archivePath];
+    if (password.length > 0) {
+        [self applyVaultPassword:password];
+    }
+}
+
+- (void)applyVaultPassword:(NSString*)password {
+    _secureField.stringValue = password;
+    _plainField.stringValue = password;
+    [self syncVisibility];
+
+    NSView* firstResponder = self.preferredFirstResponderView;
+    if (firstResponder) {
+        [self.view.window makeFirstResponder:firstResponder];
+    }
 }
 
 - (void)togglePasswordVisibility:(__unused NSButton*)sender {
@@ -439,7 +482,20 @@ static uint32_t SZDialogRoundUpByteCountToGB(uint64_t byteCount) {
                            message:(NSString*)message
                       initialValue:(NSString*)initialValue
                           password:(NSString* _Nullable* _Nullable)password {
-    SZPasswordAccessoryController* accessoryController = [[SZPasswordAccessoryController alloc] initWithInitialValue:initialValue];
+    return [self promptForPasswordWithTitle:title
+                                    message:message
+                               initialValue:initialValue
+                                 archivePath:nil
+                                   password:password];
+}
+
++ (BOOL)promptForPasswordWithTitle:(NSString*)title
+                           message:(NSString*)message
+                      initialValue:(NSString*)initialValue
+                        archivePath:(NSString*)archivePath
+                          password:(NSString* _Nullable* _Nullable)password {
+    SZPasswordAccessoryController* accessoryController = [[SZPasswordAccessoryController alloc] initWithInitialValue:initialValue
+                                                                                                          archivePath:archivePath];
     SZModalDialogController* controller = [[SZModalDialogController alloc] initWithStyle:SZDialogStyleWarning
                                                                                    title:title
                                                                                  message:message
@@ -456,6 +512,7 @@ static uint32_t SZDialogRoundUpByteCountToGB(uint64_t byteCount) {
     }
 
     [SZSharedNSUserDefaults() setBool:accessoryController.showsPassword forKey:SZShowPasswordPreferenceKey];
+    [SZPasswordVault rememberPassword:accessoryController.password];
     if (password) {
         *password = accessoryController.password;
     }
