@@ -111,6 +111,7 @@ final class CompressDialogController: NSObject, NSTextFieldDelegate, NSComboBoxD
 
     init(sourceURLs: [URL],
          baseDirectory: URL? = nil,
+         suggestedBaseNameOverride: String? = nil,
          message: String? = nil)
     {
         let normalizedSourceURLs = sourceURLs.map(\.standardizedFileURL)
@@ -119,8 +120,9 @@ final class CompressDialogController: NSObject, NSTextFieldDelegate, NSComboBoxD
 
         self.sourceURLs = normalizedSourceURLs
         self.baseDirectory = resolvedBaseDirectory
-        suggestedBaseName = Self.suggestedArchiveBaseName(for: normalizedSourceURLs,
-                                                          baseDirectory: resolvedBaseDirectory)
+        suggestedBaseName = suggestedBaseNameOverride
+            ?? Self.suggestedArchiveBaseName(for: normalizedSourceURLs,
+                                             baseDirectory: resolvedBaseDirectory)
         self.supportedFormatInfoByName = supportedFormatInfoByName
         availableFormats = Self.makeAvailableFormats(supportedFormatInfoByName: supportedFormatInfoByName,
                                                      sourceURLs: normalizedSourceURLs)

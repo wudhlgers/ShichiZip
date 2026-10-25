@@ -724,6 +724,24 @@ class FileManagerPaneController: NSViewController, NSTableViewDataSource, NSTabl
         return selectedArchiveCandidateURL()?.standardizedFileURL
     }
 
+    /// The archive file a whole-archive "clear password" command would act on:
+    /// the selected archive file, or the currently open archive when it is
+    /// backed by a real file (temporary and nested copies are excluded). For an
+    /// open archive the password the user already entered is reused so the
+    /// follow-up operation never prompts for it again.
+    func clearPasswordTarget() -> (url: URL, cachedPassword: String?)? {
+        if isVirtualLocation {
+            guard let level = archiveSession.currentLevel,
+                  let url = level.topLevelArchiveURL
+            else {
+                return nil
+            }
+            return (url, level.archive.cachedPassword())
+        }
+        guard let url = selectedArchiveCandidateURL()?.standardizedFileURL else { return nil }
+        return (url, nil)
+    }
+
     // MARK: - Command Entry Points
 
     func openSelection() {

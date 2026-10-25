@@ -139,7 +139,17 @@ struct FileManagerPaneSnapshot {
     let extractDialogInfoText: String
     let sourceArchiveURLForPostProcessing: URL?
     let quarantineSourceArchiveURLForExtraction: URL?
+    /// The on-disk archive a whole-archive "clear password" operation would
+    /// target: the selected archive file, or the currently open archive when
+    /// it is backed by a real file rather than a temporary copy.
+    let clearPasswordArchiveURL: URL?
+    /// The password already known for that archive (only for open archives).
+    let clearPasswordCachedPassword: String?
     let capabilities: FileManagerPaneCapabilities
+
+    var canClearArchivePassword: Bool {
+        clearPasswordArchiveURL != nil
+    }
 
     var fileOperationInfoText: String {
         var lines = [currentLocationDisplayPath]
@@ -166,6 +176,7 @@ extension FileManagerPaneController {
         let selectedSingleFileSystemFile = selection.singleFileSystemFile
         let capabilities = makePaneCapabilities(selection: selection,
                                                 commandState: commandState)
+        let clearPasswordTarget = clearPasswordTarget()
 
         return FileManagerPaneSnapshot(
             currentDirectoryURL: currentDirectoryURL,
@@ -188,6 +199,8 @@ extension FileManagerPaneController {
             extractDialogInfoText: extractDialogInfoText(),
             sourceArchiveURLForPostProcessing: sourceArchiveURLForPostProcessing(),
             quarantineSourceArchiveURLForExtraction: quarantineSourceArchiveURLForExtraction(),
+            clearPasswordArchiveURL: clearPasswordTarget?.url,
+            clearPasswordCachedPassword: clearPasswordTarget?.cachedPassword,
             capabilities: capabilities,
         )
     }

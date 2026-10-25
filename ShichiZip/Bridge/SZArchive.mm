@@ -2419,6 +2419,10 @@ static BOOL SZValidateArchiveMutationName(NSString* name, NSError** error) {
     return ToNS(c->Formats[arc.FormatIndex].Name);
 }
 
+- (NSString*)cachedPassword {
+    return _cachedPasswordIsDefined ? _cachedPassword : nil;
+}
+
 - (BOOL)canWrite {
     SZArchiveOperationGuard operationGuard(self);
 

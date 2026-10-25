@@ -367,6 +367,191 @@ enum FileManagerArchiveCommandSupport {
         }
     }
 
+    static func clearArchivePassword(from activePane: FileManagerPaneController,
+                                     parentWindow: NSWindow?,
+                                     refreshPaneDisplayingDirectory: @escaping @MainActor (URL) -> Void,
+                                     showError: @escaping @MainActor (Error) -> Void)
+    {
+        let snapshot = activePane.snapshot
+        guard let archiveURL = snapshot.clearPasswordArchiveURL else { return }
+        let cachedPassword = snapshot.clearPasswordCachedPassword
+
+        Task { @MainActor [weak parentWindow] in
+            do {
+                let analysis = ArchivePasswordClearing.analyze(archiveURL: archiveURL)
+                if analysis.isKnownUnencrypted {
+                    szPresentMessage(title: SZL10n.string("app.archive.clearPassword.notEncryptedTitle"),
+                                     message: SZL10n.string("app.archive.clearPassword.notEncryptedMessage"),
+                                     for: parentWindow)
+                    return
+                }
+
+                guard let format = analysis.compressionFormat else {
+                    // Read-only formats (e.g. RAR) cannot be modified in place;
+                    // offer the jump into the conversion flow.
+                    guard let parentWindow,
+                          await runReadOnlyFormatJump(archiveName: archiveURL.lastPathComponent,
+                                                      parentWindow: parentWindow)
+                    else {
+                        return
+                    }
+                    try await runConversionFlow(archiveURL: archiveURL,
+                                                cachedPassword: cachedPassword,
+                                                parentWindow: parentWindow,
+                                                refreshPaneDisplayingDirectory: refreshPaneDisplayingDirectory)
+                    return
+                }
+
+                guard let parentWindow,
+                      let outcome = await ClearPasswordDialog.run(forArchive: archiveURL,
+                                                                  parentWindow: parentWindow)
+                else {
+                    return
+                }
+
+                let destinationURL: URL
+                switch outcome {
+                case .replaceInPlace:
+                    destinationURL = archiveURL
+                case .saveAsNew:
+                    guard let chosenURL = await promptForNewArchiveDestination(
+                        suggestedName: ArchivePasswordClearing.suggestedSaveAsFileName(
+                            for: archiveURL,
+                            suffix: SZL10n.string("app.archive.clearPassword.saveAsSuffix")),
+                        parentWindow: parentWindow)
+                    else {
+                        return
+                    }
+                    destinationURL = chosenURL
+                }
+
+                try await ArchiveOperationRunner.run(
+                    operationTitle: SZL10n.string("app.archive.clearPassword.progressTitle"),
+                    initialFileName: archiveURL.lastPathComponent,
+                    parentWindow: parentWindow,
+                ) { session in
+                    try ArchivePasswordClearing.perform(archiveURL: archiveURL,
+                                                        destinationURL: destinationURL,
+                                                        outputSettings: ArchivePasswordClearing.makePlainOutputSettings(format: format),
+                                                        sourcePassword: cachedPassword,
+                                                        session: session)
+                }
+
+                // Open panes browsing the original archive must reopen its
+                // replaced file; new destinations simply appear on refresh.
+                FileManagerArchiveChangeBus.publish(FileManagerArchiveChange(archiveURL: archiveURL))
+                refreshPaneDisplayingDirectory(destinationURL.deletingLastPathComponent())
+                szPresentMessage(title: SZL10n.string("app.archive.clearPassword.done"),
+                                 message: destinationURL.path,
+                                 for: parentWindow)
+            } catch {
+                showError(error)
+            }
+        }
+    }
+
+    /// The read-only-format notice with a jump button into the conversion flow.
+    @MainActor
+    private static func runReadOnlyFormatJump(archiveName: String, parentWindow: NSWindow) async -> Bool {
+        let dialog = SZModalDialogController(
+            style: .warning,
+            title: SZL10n.string("app.archive.clearPassword.readOnlyTitle"),
+            message: SZL10n.string("app.archive.clearPassword.readOnlyMessage", archiveName),
+            actions: [
+                SZDialogAction(title: SZL10n.string("common.cancel"), roles: .cancel),
+                SZDialogAction(title: SZL10n.string("menu.convertFormat"), roles: .default),
+            ],
+            accessoryView: nil,
+            preferredFirstResponder: nil,
+        )
+        let buttonIndex = await withCheckedContinuation { continuation in
+            dialog.beginSheetModal(for: parentWindow) { index in
+                continuation.resume(returning: index)
+            }
+        }
+        return buttonIndex == 1
+    }
+
+    /// The full conversion flow backed by the compress dialog so the user can
+    /// pick the target format, destination, encryption, and advanced options.
+    @MainActor
+    private static func runConversionFlow(archiveURL: URL,
+                                          cachedPassword: String?,
+                                          parentWindow: NSWindow?,
+                                          refreshPaneDisplayingDirectory: @escaping @MainActor (URL) -> Void) async throws
+    {
+        guard let parentWindow else { return }
+
+        let compressDialog = CompressDialogController(
+            sourceURLs: [archiveURL],
+            baseDirectory: archiveURL.deletingLastPathComponent(),
+            suggestedBaseNameOverride: archiveURL.deletingPathExtension().lastPathComponent,
+            message: SZL10n.string("app.archive.convert.compressDialogMessage", archiveURL.lastPathComponent),
+        )
+        guard let result = await compressDialog.runModal(for: parentWindow) else { return }
+
+        let deleteOriginalAfterConversion = result.settings.deleteAfterCompression
+        try await ArchiveOperationRunner.run(
+            operationTitle: SZL10n.string("app.archive.convert.progressTitle"),
+            initialFileName: archiveURL.lastPathComponent,
+            parentWindow: parentWindow,
+        ) { session in
+            try ArchivePasswordClearing.perform(archiveURL: archiveURL,
+                                                destinationURL: result.archiveURL,
+                                                outputSettings: result.settings,
+                                                sourcePassword: cachedPassword,
+                                                session: session)
+        }
+
+        // The dialog's delete-source option applies to the original archive.
+        if deleteOriginalAfterConversion {
+            _ = try? FileManager.default.trashItem(at: archiveURL, resultingItemURL: nil)
+        }
+
+        // The source file is intentionally kept unless the user opted out via
+        // the dialog's delete-after option above.
+        refreshPaneDisplayingDirectory(result.archiveURL.deletingLastPathComponent())
+        szPresentMessage(title: SZL10n.string("app.archive.convert.done"),
+                         message: result.archiveURL.path,
+                         for: parentWindow)
+    }
+
+    @MainActor
+    private static func promptForNewArchiveDestination(suggestedName: String,
+                                                       parentWindow: NSWindow?) async -> URL?
+    {
+        let savePanel = NSSavePanel()
+        savePanel.canCreateDirectories = true
+        savePanel.nameFieldStringValue = suggestedName
+        savePanel.message = SZL10n.string("app.archive.clearPassword.saveAsPanelMessage")
+        return await withCheckedContinuation { continuation in
+            savePanel.szBeginSheetOrRunModal(for: parentWindow) { response in
+                continuation.resume(returning: response == .OK ? savePanel.url : nil)
+            }
+        }
+    }
+
+    static func convertArchiveFormat(from activePane: FileManagerPaneController,
+                                     parentWindow: NSWindow?,
+                                     refreshPaneDisplayingDirectory: @escaping @MainActor (URL) -> Void,
+                                     showError: @escaping @MainActor (Error) -> Void)
+    {
+        let snapshot = activePane.snapshot
+        guard let archiveURL = snapshot.clearPasswordArchiveURL else { return }
+        let cachedPassword = snapshot.clearPasswordCachedPassword
+
+        Task { @MainActor [weak parentWindow] in
+            do {
+                try await runConversionFlow(archiveURL: archiveURL,
+                                            cachedPassword: cachedPassword,
+                                            parentWindow: parentWindow,
+                                            refreshPaneDisplayingDirectory: refreshPaneDisplayingDirectory)
+            } catch {
+                showError(error)
+            }
+        }
+    }
+
     private static func extractionSettings(for result: ExtractDialogResult,
                                            archiveURL: URL,
                                            archiveItems: [ArchiveItem]) -> SZExtractionSettings
@@ -667,6 +852,10 @@ enum FileManagerCommandValidator {
             return capabilities.canExtractSelectionOrArchive
         case #selector(FileManagerWindowController.testArchive(_:)):
             return capabilities.canTestArchiveSelection
+        case #selector(FileManagerWindowController.clearArchivePassword(_:)):
+            return activePane.canClearArchivePassword
+        case #selector(FileManagerWindowController.convertArchiveFormat(_:)):
+            return activePane.canClearArchivePassword
         case #selector(FileManagerWindowController.copyFiles(_:)):
             return capabilities.canCopySelection
         case #selector(FileManagerWindowController.moveFiles(_:)):

@@ -75,6 +75,8 @@ final class FileManagerPaneSnapshotTests: XCTestCase {
                                 extractDialogInfoText: extractDialogInfoText,
                                 sourceArchiveURLForPostProcessing: sourceArchiveURLForPostProcessing,
                                 quarantineSourceArchiveURLForExtraction: quarantineSourceArchiveURLForExtraction,
+                                clearPasswordArchiveURL: nil,
+                                clearPasswordCachedPassword: nil,
                                 capabilities: capabilities)
     }
 

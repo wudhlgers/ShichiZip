@@ -594,6 +594,20 @@ class FileManagerWindowController: NSWindowController, NSWindowDelegate, NSUserI
                                                      showError: showErrorAlert)
     }
 
+    @objc func clearArchivePassword(_: Any?) {
+        FileManagerArchiveCommandSupport.clearArchivePassword(from: activePane,
+                                                              parentWindow: window,
+                                                              refreshPaneDisplayingDirectory: refreshPaneDisplayingDirectory,
+                                                              showError: showErrorAlert)
+    }
+
+    @objc func convertArchiveFormat(_: Any?) {
+        FileManagerArchiveCommandSupport.convertArchiveFormat(from: activePane,
+                                                              parentWindow: window,
+                                                              refreshPaneDisplayingDirectory: refreshPaneDisplayingDirectory,
+                                                              showError: showErrorAlert)
+    }
+
     @objc func openSelectedItemInside(_: Any?) {
         activePane.openSelectionInside(.defaultBehavior)
     }

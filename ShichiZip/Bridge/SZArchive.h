@@ -363,6 +363,11 @@ typedef NS_ENUM(NSInteger, SZCompressionTimePrecision) {
 /// Get the detected format name
 @property (nonatomic, readonly, nullable) NSString* formatName;
 
+/// The password learned while browsing or updating this archive, if any.
+/// Callers can reuse it for follow-up whole-archive operations so the user
+/// is not prompted for the same archive twice.
+- (nullable NSString*)cachedPassword;
+
 /// Get whether the detected archive format supports in-place updates.
 @property (nonatomic, readonly) BOOL canWrite;
 
