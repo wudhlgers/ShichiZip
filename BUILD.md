@@ -102,6 +102,25 @@ xcodebuild -project ShichiZip.xcodeproj -scheme ShichiZipZS -configuration Debug
 
 Substitute `-arch x86_64` for Intel builds. Use `-configuration Release` for release builds.
 
+#### App bundles inside the repository
+
+To keep build products out of the global `~/Library/Developer/Xcode/DerivedData`, use the local build script:
+
+```sh
+project/scripts/build-app.sh mainline Debug arm64
+project/scripts/build-app.sh zs Debug arm64
+project/scripts/build-app.sh all Release arm64
+```
+
+Arguments are `[mainline|zs|all] [Debug|Release] [arm64|x86_64]`; all are optional and default to `mainline`, `Debug`, and the host architecture. The script keeps intermediate files under `build/intermediates` and `build/products`, then copies the finished bundles and any dSYMs to:
+
+```text
+build/apps/Debug/ShichiZip.app
+build/apps/Debug/ShichiZip ZS.app
+```
+
+The copied bundles in `build/apps` are the hand-off artifacts; everything under `build/` is already ignored by Git.
+
 ## Testing
 
 The project ships unit and UI test targets for each variant: `ShichiZipTests` / `ShichiZipUITests` for mainline, and `ShichiZipZSTests` / `ShichiZipZSUITests` for the Zstandard fork.
